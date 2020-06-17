@@ -2,7 +2,6 @@
 
 from .MPSClass import TN
 import numpy as np
-from sklearn.externals.six.moves import xrange
 
 class PositiveMPS(TN):
     """Matrix Product States with non-negative parameters
@@ -63,7 +62,7 @@ class PositiveMPS(TN):
         """
         w2 = np.reshape(self.w,(self.n_features,self.d,self.D,self.D))
         tmp = np.square(w2[0,x[0],0,:]) #First tensor
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp = np.dot(tmp,np.square(w2[i,x[i],:,:])) #MPS contraction  
         probability = np.inner(tmp,np.square(w2[self.n_features-1,
                                                 x[self.n_features-1],:,0]))
@@ -77,7 +76,7 @@ class PositiveMPS(TN):
         """
         w2 = np.reshape(self.w,(self.n_features,self.d,self.D,self.D))
         tmp = np.sum(np.square(w2[0,:,0,:]),0) #First tensor
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp = np.dot(tmp,np.sum(np.square(w2[i,:,:,:]),0)) #MPS contraction  
         norm = np.inner(tmp,np.sum(np.square(w2[self.n_features-1,:,:,0]),0))
         return norm
@@ -103,13 +102,13 @@ class PositiveMPS(TN):
         tmp = np.zeros((self.n_features,self.D))
         tmp2 = np.zeros((self.n_features,self.D))
         tmp[0,:] = np.square(w2[0,x[0],0,:])
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp[i,:] = np.dot(tmp[i-1,:],np.square(w2[i,x[i],:,:]))  
         tmp[self.n_features-1,:] = np.inner(tmp[self.n_features-2,:],
                 np.square(w2[self.n_features-1,x[self.n_features-1],:,0]))
         tmp2[self.n_features-1,:] = np.square(w2[self.n_features-1,
                 x[self.n_features-1],:,0])
-        for i in xrange(self.n_features-2,-1,-1):
+        for i in range(self.n_features-2,-1,-1):
             tmp2[i,:] = np.dot(np.square(w2[i,x[i],:]),tmp2[i+1,:])
         tmp2[0,:] = np.inner(np.square(w2[0,x[0],0,:]),tmp2[1,:])
     
@@ -118,7 +117,7 @@ class PositiveMPS(TN):
         derivative[self.n_features-1,x[self.n_features-1],:,0] = \
                     np.multiply(tmp[self.n_features-2,:],
                         2*(w2[self.n_features-1,x[self.n_features-1],:,0]))
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
                 derivative[i,x[i],:,:]=np.multiply(np.outer(tmp[i-1,:],
                 tmp2[i+1,:]),2*(w2[i,x[i],:]))
 
@@ -136,22 +135,22 @@ class PositiveMPS(TN):
         tmp=np.zeros((self.n_features,self.D))
         tmp2=np.zeros((self.n_features,self.D))
         tmp[0,:]=np.sum(np.square(w2[0,:,0,:]),0)
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp[i,:]=np.dot(tmp[i-1,:],np.sum(np.square(w2[i,:,:,:]),0)) 
         tmp[self.n_features-1,:]=np.inner(tmp[self.n_features-2,:],
                 np.sum(np.square(w2[self.n_features-1,:,:,0]),0))
         tmp2[self.n_features-1,:]=np.sum(np.square(w2[self.n_features-1,:,:,0]),0)
-        for i in xrange(self.n_features-2,-1,-1):
+        for i in range(self.n_features-2,-1,-1):
             tmp2[i,:]=np.dot(np.sum(np.square(w2[i,:,:,:]),0),tmp2[i+1,:])
         tmp2[0,:]=np.inner(np.sum(np.square(w2[0,:,0,:]),0),tmp2[1,:])
     
-        for j in xrange(self.d):
+        for j in range(self.d):
             derivative[0,j,0,:]=np.multiply(tmp2[1,:],2*(w2[0,j,0,:]))
             derivative[self.n_features-1,j,:,0]=\
                 np.multiply(tmp[self.n_features-2,:],2*(w2[self.n_features-1,j,:,0]))
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             temp3=np.outer(tmp[i-1,:],tmp2[i+1,:])
-            for j in xrange(self.d):
+            for j in range(self.d):
                 derivative[i,j,:,:]=np.multiply(temp3,2*(w2[i,j,:,:]))
         return derivative.reshape(self.m_parameters)
 

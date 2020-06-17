@@ -3,7 +3,6 @@
 
 from .MPSClass import TN
 import numpy as np
-from sklearn.externals.six.moves import xrange
 
 
 class ComplexBorn(TN):
@@ -66,7 +65,7 @@ class ComplexBorn(TN):
         w2 = np.reshape(self.w,(self.n_features,self.d,self.D,self.D))
         
         tmp = w2[0,x[0],0,:] #First tensor
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp = np.dot(tmp,w2[i,x[i],:,:]) #MPS contraction  
         output = np.inner(tmp,w2[self.n_features-1,x[self.n_features-1],:,0])
         probability = np.abs(output)**2
@@ -81,7 +80,7 @@ class ComplexBorn(TN):
         w2=np.reshape(self.w,(self.n_features,self.d,self.D,self.D))
         tmp = np.tensordot(w2[0,:,0,:],np.conj(w2[0,:,0,:]),
                            axes=([0],[0])).reshape(self.D*self.D)
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp = np.dot(tmp,np.tensordot(w2[i,:,:,:],np.conj(w2[i,:,:,:]),
                     axes=([0],[0])).transpose((0,2,1,3)).reshape(self.D*self.D,self.D*self.D)) 
         norm = np.abs(np.inner(tmp,np.tensordot(w2[self.n_features-1,:,:,0],
@@ -110,7 +109,7 @@ class ComplexBorn(TN):
         tmp=np.zeros((self.n_features,self.D),dtype=np.complex128)
         tmp2=np.zeros((self.n_features,self.D),dtype=np.complex128)
         tmp[0,:]=w2[0,x[0],0,:]
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp[i,:]=np.dot(tmp[i-1,:],w2[i,x[i],:,:])  
         mpscontracted=np.inner(tmp[self.n_features-2,:],w2[self.n_features-1,
                                        x[self.n_features-1],:,0])
@@ -118,7 +117,7 @@ class ComplexBorn(TN):
         tmp[self.n_features-1,:]=np.inner(tmp[self.n_features-2,:],
                         w2[self.n_features-1,x[self.n_features-1],:,0])
         tmp2[self.n_features-1,:]=w2[self.n_features-1,x[self.n_features-1],:,0]
-        for i in xrange(self.n_features-2,-1,-1):
+        for i in range(self.n_features-2,-1,-1):
             tmp2[i,:]=np.dot(w2[i,x[i],:,:],tmp2[i+1,:])
         tmp2[0,:]=np.inner(w2[0,x[0],0,:],tmp2[1,:])
     
@@ -126,7 +125,7 @@ class ComplexBorn(TN):
         derivative[0,x[0],0,:]=2*np.conj(tmp2[1,:])*mpscontracted
         derivative[self.n_features-1,
                    x[self.n_features-1],:,0]=2*np.conj(tmp[self.n_features-2,:])*mpscontracted
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
                 derivative[i,x[i],:,:]=2*np.conj(np.outer(tmp[i-1,:],
                                             tmp2[i+1,:]))*mpscontracted
 
@@ -145,7 +144,7 @@ class ComplexBorn(TN):
         tmp=np.zeros((self.n_features,self.D*self.D),dtype=np.complex128)
         tmp2=np.zeros((self.n_features,self.D*self.D),dtype=np.complex128)
         tmp[0,:]=np.tensordot(w2[0,:,0,:],np.conj(w2[0,:,0,:]),axes=([0],[0])).reshape(self.D*self.D)
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp[i,:]=np.dot(tmp[i-1,:],np.tensordot(w2[i,:,:,:],np.conj(w2[i,:,:,:]),
                 axes=([0],[0])).transpose((0,2,1,3)).reshape(self.D*self.D,self.D*self.D))
         tmp[self.n_features-1,:]=np.inner(tmp[self.n_features-2,:],
@@ -156,7 +155,7 @@ class ComplexBorn(TN):
         tmp2[self.n_features-1,:]=np.tensordot(w2[self.n_features-1,:,:,0],
                 np.conj(w2[self.n_features-1,:,:,0]),
                 axes=([0],[0])).reshape(self.D*self.D)
-        for i in xrange(self.n_features-2,-1,-1):
+        for i in range(self.n_features-2,-1,-1):
             tmp2[i,:]=np.dot(np.tensordot(w2[i,:,:,:],np.conj(w2[i,:,:,:]),
                 axes=([0],[0])).transpose((0,2,1,3)).reshape(self.D*self.D,
                                     self.D*self.D),tmp2[i+1,:])
@@ -164,16 +163,16 @@ class ComplexBorn(TN):
                             axes=([0],[0])).reshape(self.D*self.D),tmp2[1,:])
         
 
-        for j in xrange(self.d):
+        for j in range(self.d):
             derivative[0,j,0,:]=2*np.dot(w2[0,j,0,:],
                                             tmp2[1,:].reshape(self.D,self.D))
             derivative[self.n_features-1,j,:,0]=2*np.dot(w2[self.n_features-1,j,:,0],
                             tmp[self.n_features-2,:].reshape(self.D,self.D))
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             temp1=tmp[i-1,:].reshape(self.D,self.D)
             temp2=tmp2[i+1,:].reshape(self.D,self.D)
             
-            for j in xrange(self.d):
+            for j in range(self.d):
                 temp3=np.dot(np.dot(temp1.transpose(),w2[i,j,:,:]),temp2)
                 derivative[i,j,:,:]=2*np.copy(temp3)
                 
@@ -211,7 +210,7 @@ class ComplexBorn(TN):
             array of derivatives of the log-likelihood
         """
         update_w=np.zeros(self.m_parameters,dtype=np.complex128)
-        for n in xrange(v.shape[0]):
+        for n in range(v.shape[0]):
             update_w -= self._logderivative(v[n,:])
         update_w += v.shape[0]*self._logderivativenorm()    
         update_w /= v.shape[0]

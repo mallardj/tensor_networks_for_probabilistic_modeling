@@ -35,21 +35,21 @@ def run():
     N=X.shape[1]
     d=np.max(X+1)
     list_of_states=[]
-    for i in xrange(N):
+    for i in range(N):
         list_of_states.append([])
-        for u in xrange(bond_dimension):
+        for u in range(bond_dimension):
             dictionnary=dict()
-            for l in xrange(d):
+            for l in range(d):
                 dictionnary[str(l)] = np.random.rand()
             list_of_states[i].append(pomegranate.State(pomegranate.DiscreteDistribution(dictionnary)))
     model = pomegranate.HiddenMarkovModel()
-    for i in xrange(N-1):
-        for d in xrange(D):
-            for d2 in xrange(D):
+    for i in range(N-1):
+        for d in range(D):
+            for d2 in range(D):
                 model.add_transition(list_of_states[i][d],list_of_states[i+1][d2],np.random.rand())
-    for d in xrange(D):
+    for d in range(D):
         model.add_transition(model.start,list_of_states[0][d],np.random.rand())
-    for d in xrange(D):
+    for d in range(D):
         model.add_transition(list_of_states[N-1][d],model.end,np.random.rand())
     model.bake()
 

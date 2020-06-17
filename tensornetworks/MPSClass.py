@@ -2,7 +2,6 @@
 
 import time
 import numpy as np
-from sklearn.externals.six.moves import xrange
 from sklearn.utils import check_array
 from sklearn.utils import check_random_state
 from functools import partial
@@ -143,7 +142,7 @@ class TN():
             array of derivatives of the log-likelihood
         """
         update_w=np.zeros(self.m_parameters)
-        for n in xrange(v.shape[0]):
+        for n in range(v.shape[0]):
             update_w -= self._logderivative(v[n,:])
         update_w += v.shape[0]*self._logderivativenorm()    
         update_w /= v.shape[0]
@@ -165,7 +164,7 @@ class TN():
         if w is not None:
             self.w=w
         self.norm=self._computenorm()
-        for n in xrange(v.shape[0]):
+        for n in range(v.shape[0]):
             loglikelihood+=np.log(max(self._probability(v[n,:])/self.norm,10** (-50)))
         return -loglikelihood/v.shape[0]
 
@@ -334,7 +333,7 @@ class TN():
 
         n_batches = int(np.ceil(float(self.n_samples) / self.batch_size))
         begin = time.time()
-        for iteration in xrange(1, self.n_iter + 1):
+        for iteration in range(1, self.n_iter + 1):
             batch_slices = list(self._gen_even_slices(self.batch_size,
                                             n_batches, self.n_samples, rng))
             for batch_slice in batch_slices:

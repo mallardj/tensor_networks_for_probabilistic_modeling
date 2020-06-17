@@ -2,7 +2,6 @@
 
 from .MPSClass import TN
 import numpy as np
-from sklearn.externals.six.moves import xrange
 
 
 class ComplexLPS(TN):
@@ -69,7 +68,7 @@ class ComplexLPS(TN):
       
         tmp = w2[0,x[0],0,:,:]
         tmp2 = np.einsum('ij,kj->ik',tmp,np.conjugate(tmp)).reshape(self.D*self.D)
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp = np.einsum('imj,klj->ikml',w2[i,x[i],:,:,:],
                             np.conjugate(w2[i,x[i],:,:,:])).reshape((self.D*self.D,self.D*self.D))
             tmp2 = np.dot(tmp2,tmp)
@@ -90,7 +89,7 @@ class ComplexLPS(TN):
 
         tmp2 = np.einsum('ijk,ilk->jl',w2[0,:,0,:,:],
                          np.conj(w2[0,:,0,:,:])).reshape(self.D*self.D)
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             tmp = np.einsum('pimj,pklj->ikml',w2[i,:,:,:,:],
                             np.conjugate(w2[i,:,:,:,:])).reshape((self.D*self.D,self.D*self.D))
             tmp2 = np.dot(tmp2,tmp)
@@ -122,7 +121,7 @@ class ComplexLPS(TN):
         tmp2=np.zeros((self.n_features,self.D*self.D),dtype=np.complex128)
         tmp[0,:] = np.einsum('ij,kj->ik',w2[0,x[0],0,:,:],
                     np.conjugate(w2[0,x[0],0,:,:])).reshape(self.D*self.D)
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             newtmp = np.einsum('imj,klj->ikml',w2[i,x[i],:,:,:],
                         np.conjugate(w2[i,x[i],:,:,:])).reshape((self.D*self.D,self.D*self.D))
             tmp[i,:]=np.dot(tmp[i-1,:],newtmp)  
@@ -133,7 +132,7 @@ class ComplexLPS(TN):
         
         
         tmp2[self.n_features-1,:]=newtmp
-        for i in xrange(self.n_features-2,-1,-1):
+        for i in range(self.n_features-2,-1,-1):
             newtmp = np.einsum('imj,klj->ikml',w2[i,x[i],:,:,:],
                       np.conjugate(w2[i,x[i],:,:,:])).reshape((self.D*self.D,self.D*self.D))
             tmp2[i,:]=np.dot(newtmp,tmp2[i+1,:])
@@ -148,7 +147,7 @@ class ComplexLPS(TN):
         derivative[self.n_features-1,x[self.n_features-1],:,0,:]=\
             2*np.einsum('ij,il->lj',w2[self.n_features-1,x[self.n_features-1],:,0,:],
                         tmp[self.n_features-2,:].reshape(self.D,self.D))
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             temp1=tmp[i-1,:].reshape(self.D,self.D)
             temp2=tmp2[i+1,:].reshape(self.D,self.D)
             derivative[i,x[i],:,:,:]=2*np.einsum('ikm,ij,kl->jlm',w2[i,x[i],:,:,:],temp1,temp2)
@@ -170,7 +169,7 @@ class ComplexLPS(TN):
         
         tmp[0,:] = np.einsum('ijk,ilk->jl',w2[0,:,0,:,:],
                         np.conj(w2[0,:,0,:,:])).reshape(self.D*self.D)
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             newtmp = np.einsum('pimj,pklj->ikml',w2[i,:,:,:,:],
                                np.conjugate(w2[i,:,:,:,:])).reshape((self.D*self.D,self.D*self.D))
             tmp[i,:] = np.dot(tmp[i-1,:],newtmp)  
@@ -180,23 +179,23 @@ class ComplexLPS(TN):
         tmp[self.n_features-1,:]=mpscontracted
 
         tmp2[self.n_features-1,:]=newtmp
-        for i in xrange(self.n_features-2,-1,-1):
+        for i in range(self.n_features-2,-1,-1):
             newtmp = np.einsum('pimj,pklj->ikml',w2[i,:,:,:,:],
                         np.conjugate(w2[i,:,:,:,:])).reshape((self.D*self.D,self.D*self.D))
             tmp2[i,:] = np.dot(newtmp,tmp2[i+1,:])
         newtmp=np.einsum('ijk,ilk->jl',w2[0,:,0,:,:],np.conj(w2[0,:,0,:,:])).reshape(self.D*self.D)
         tmp2[0,:]=np.inner(newtmp,tmp2[1,:])
         
-        for j in xrange(self.d):
+        for j in range(self.d):
             derivative[0,j,0,:,:]=2*np.einsum('ij,il->lj',w2[0,j,0,:,:],
                                             tmp2[1,:].reshape(self.D,self.D))
             derivative[self.n_features-1,j,:,0,:]=\
             2*np.einsum('ij,il->lj',w2[self.n_features-1,j,:,0,:],
                             tmp[self.n_features-2,:].reshape(self.D,self.D))
-        for i in xrange(1,self.n_features-1):
+        for i in range(1,self.n_features-1):
             temp1=tmp[i-1,:].reshape(self.D,self.D)
             temp2=tmp2[i+1,:].reshape(self.D,self.D)
-            for j in xrange(self.d):
+            for j in range(self.d):
                 derivative[i,j,:,:,:]=2*np.einsum('ikm,ij,kl->jlm',w2[i,j,:,:,:],temp1,temp2)
         
         return derivative.reshape(self.m_parameters)
@@ -266,7 +265,7 @@ class ComplexLPS(TN):
             array of derivatives of the log-likelihood
         """
         update_w=np.zeros(self.m_parameters,dtype=np.complex128)
-        for n in xrange(v.shape[0]):
+        for n in range(v.shape[0]):
             update_w -= self._logderivative(v[n,:])
         update_w += v.shape[0]*self._logderivativenorm()    
         update_w /= v.shape[0]
