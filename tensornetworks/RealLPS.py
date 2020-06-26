@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from .MPSClass import TN
-import numpy as np
+import numpy as cp
 
 
 class RealLPS(TN):
@@ -63,19 +63,19 @@ class RealLPS(TN):
         -------
         probability : float
         """
-        w2 = np.reshape(self.w,(self.n_features,self.d,self.D,self.D,self.mu))
+        w2 = cp.reshape(self.w,(self.n_features,self.d,self.D,self.D,self.mu))
       
         tmp = w2[0,x[0],0,:,:]
-        tmp2 = np.einsum('ij,kj->ik',tmp,np.conjugate(tmp)).reshape(self.D*self.D)
+        tmp2 = cp.einsum('ij,kj->ik',tmp,cp.conjugate(tmp)).reshape(self.D*self.D)
         for i in range(1,self.n_features-1):
-            tmp = np.einsum('imj,klj->ikml',w2[i,x[i],:,:,:],
-                            np.conjugate(w2[i,x[i],:,:,:])).reshape((self.D*self.D,self.D*self.D))
-            tmp2 = np.dot(tmp2,tmp)
+            tmp = cp.einsum('imj,klj->ikml',w2[i,x[i],:,:,:],
+                            cp.conjugate(w2[i,x[i],:,:,:])).reshape((self.D*self.D,self.D*self.D))
+            tmp2 = cp.dot(tmp2,tmp)
 
-        tmp = np.einsum('ij,kj->ik',w2[self.n_features-1,x[self.n_features-1],:,0,:],
-                        np.conjugate(w2[self.n_features-1,
+        tmp = cp.einsum('ij,kj->ik',w2[self.n_features-1,x[self.n_features-1],:,0,:],
+                        cp.conjugate(w2[self.n_features-1,
                         x[self.n_features-1],:,0,:])).reshape(self.D*self.D)
-        probability = np.abs(np.inner(tmp2,tmp))
+        probability = cp.abs(cp.inner(tmp2,tmp))
         return probability
 
 
@@ -85,17 +85,17 @@ class RealLPS(TN):
         -------
         norm : float
         """
-        w2 = np.reshape(self.w,(self.n_features,self.d,self.D,self.D,self.mu))
+        w2 = cp.reshape(self.w,(self.n_features,self.d,self.D,self.D,self.mu))
 
-        tmp2 = np.einsum('ijk,ilk->jl',w2[0,:,0,:,:],
-                         np.conj(w2[0,:,0,:,:])).reshape(self.D*self.D)
+        tmp2 = cp.einsum('ijk,ilk->jl',w2[0,:,0,:,:],
+                         cp.conj(w2[0,:,0,:,:])).reshape(self.D*self.D)
         for i in range(1,self.n_features-1):
-            tmp = np.einsum('pimj,pklj->ikml',w2[i,:,:,:,:],
-                            np.conjugate(w2[i,:,:,:,:])).reshape((self.D*self.D,self.D*self.D))
-            tmp2 = np.dot(tmp2,tmp)
-        tmp = np.einsum('ijk,ilk->jl',w2[self.n_features-1,:,:,0,:],
-                        np.conjugate(w2[self.n_features-1,:,:,0,:])).reshape(self.D*self.D)
-        norm = np.abs(np.inner(tmp2,tmp))
+            tmp = cp.einsum('pimj,pklj->ikml',w2[i,:,:,:,:],
+                            cp.conjugate(w2[i,:,:,:,:])).reshape((self.D*self.D,self.D*self.D))
+            tmp2 = cp.dot(tmp2,tmp)
+        tmp = cp.einsum('ijk,ilk->jl',w2[self.n_features-1,:,:,0,:],
+                        cp.conjugate(w2[self.n_features-1,:,:,0,:])).reshape(self.D*self.D)
+        norm = cp.abs(cp.inner(tmp2,tmp))
         return norm
 
     def _derivative(self, x):
@@ -108,48 +108,48 @@ class RealLPS(TN):
         -------
         derivative : numpy array, shape (m_parameters,)
         """
-        w2=np.reshape(self.w,(self.n_features,self.d,self.D,self.D,self.mu))
-        derivative=np.zeros((self.n_features,self.d,self.D,self.D,self.mu),dtype=np.float64)
+        w2=cp.reshape(self.w,(self.n_features,self.d,self.D,self.D,self.mu))
+        derivative=cp.zeros((self.n_features,self.d,self.D,self.D,self.mu),dtype=cp.float64)
         
         #Store intermediate tensor contractions for the derivatives: 
         #left to right and right to left
         #tmp stores the contraction of the first i+1 tensors from the left 
         #in tmp[i,:,:], tmp2 the remaining tensors on the right
         #the mps contracted is the remaining contraction tmp[i-1]w[i]tmp2[i+1]
-        tmp=np.zeros((self.n_features,self.D*self.D),dtype=np.float64)
-        tmp2=np.zeros((self.n_features,self.D*self.D),dtype=np.float64)
-        tmp[0,:] = np.einsum('ij,kj->ik',w2[0,x[0],0,:,:],
-                        np.conjugate(w2[0,x[0],0,:,:])).reshape(self.D*self.D)
+        tmp=cp.zeros((self.n_features,self.D*self.D),dtype=cp.float64)
+        tmp2=cp.zeros((self.n_features,self.D*self.D),dtype=cp.float64)
+        tmp[0,:] = cp.einsum('ij,kj->ik',w2[0,x[0],0,:,:],
+                        cp.conjugate(w2[0,x[0],0,:,:])).reshape(self.D*self.D)
         for i in range(1,self.n_features-1):
-            newtmp = np.einsum('imj,klj->ikml',w2[i,x[i],:,:,:],
-                        np.conjugate(w2[i,x[i],:,:,:])).reshape((self.D*self.D,self.D*self.D))
-            tmp[i,:]=np.dot(tmp[i-1,:],newtmp)  
-        newtmp = np.einsum('ij,kj->ik',w2[self.n_features-1,
-                            x[self.n_features-1],:,0,:],np.conjugate(w2[self.n_features-1,
+            newtmp = cp.einsum('imj,klj->ikml',w2[i,x[i],:,:,:],
+                        cp.conjugate(w2[i,x[i],:,:,:])).reshape((self.D*self.D,self.D*self.D))
+            tmp[i,:]=cp.dot(tmp[i-1,:],newtmp)  
+        newtmp = cp.einsum('ij,kj->ik',w2[self.n_features-1,
+                            x[self.n_features-1],:,0,:],cp.conjugate(w2[self.n_features-1,
                             x[self.n_features-1],:,0,:])).reshape(self.D*self.D)
-        mpscontracted=np.inner(tmp[self.n_features-2,:],newtmp)
+        mpscontracted=cp.inner(tmp[self.n_features-2,:],newtmp)
         tmp[self.n_features-1,:]=mpscontracted
         
         
         tmp2[self.n_features-1,:]=newtmp
         for i in range(self.n_features-2,-1,-1):
-            newtmp = np.einsum('imj,klj->ikml',w2[i,x[i],:,:,:],
-                        np.conjugate(w2[i,x[i],:,:,:])).reshape((self.D*self.D,self.D*self.D))
-            tmp2[i,:]=np.dot(newtmp,tmp2[i+1,:])
-        newtmp=np.einsum('ij,kj->ik',w2[0,x[0],0,:,:],np.conjugate(w2[0,x[0],0,:,:])).reshape(self.D*self.D)
-        tmp2[0,:]=np.inner(newtmp,tmp2[1,:])
+            newtmp = cp.einsum('imj,klj->ikml',w2[i,x[i],:,:,:],
+                        cp.conjugate(w2[i,x[i],:,:,:])).reshape((self.D*self.D,self.D*self.D))
+            tmp2[i,:]=cp.dot(newtmp,tmp2[i+1,:])
+        newtmp=cp.einsum('ij,kj->ik',w2[0,x[0],0,:,:],cp.conjugate(w2[0,x[0],0,:,:])).reshape(self.D*self.D)
+        tmp2[0,:]=cp.inner(newtmp,tmp2[1,:])
     
         #Now for each tensor, the derivative is the contraction of the rest of the tensors
         
-        derivative[0,x[0],0,:,:]=2*np.einsum('ij,il->lj',
+        derivative[0,x[0],0,:,:]=2*cp.einsum('ij,il->lj',
                     w2[0,x[0],0,:,:],tmp2[1,:].reshape(self.D,self.D))
         derivative[self.n_features-1,x[self.n_features-1],:,0,:]=\
-            2*np.einsum('ij,il->lj',w2[self.n_features-1,
+            2*cp.einsum('ij,il->lj',w2[self.n_features-1,
                     x[self.n_features-1],:,0,:],tmp[self.n_features-2,:].reshape(self.D,self.D))
         for i in range(1,self.n_features-1):
             temp1=tmp[i-1,:].reshape(self.D,self.D)
             temp2=tmp2[i+1,:].reshape(self.D,self.D)
-            derivative[i,x[i],:,:,:]=2*np.einsum('ikm,ij,kl->jlm',w2[i,x[i],:,:,:],temp1,temp2)
+            derivative[i,x[i],:,:,:]=2*cp.einsum('ikm,ij,kl->jlm',w2[i,x[i],:,:,:],temp1,temp2)
 
         return derivative.reshape(self.m_parameters)
 
@@ -160,42 +160,42 @@ class RealLPS(TN):
         derivative : numpy array, shape (m_parameters,)
         """ 
         
-        w2=np.reshape(self.w,(self.n_features,self.d,self.D,self.D,self.mu))
-        derivative=np.zeros((self.n_features,self.d,self.D,self.D,self.mu),dtype=np.float64)
+        w2=cp.reshape(self.w,(self.n_features,self.d,self.D,self.D,self.mu))
+        derivative=cp.zeros((self.n_features,self.d,self.D,self.D,self.mu),dtype=cp.float64)
         
-        tmp=np.zeros((self.n_features,self.D*self.D),dtype=np.float64)
-        tmp2=np.zeros((self.n_features,self.D*self.D),dtype=np.float64)
+        tmp=cp.zeros((self.n_features,self.D*self.D),dtype=cp.float64)
+        tmp2=cp.zeros((self.n_features,self.D*self.D),dtype=cp.float64)
         
-        tmp[0,:] = np.einsum('ijk,ilk->jl',w2[0,:,0,:,:],np.conj(w2[0,:,0,:,:])).reshape(self.D*self.D)
+        tmp[0,:] = cp.einsum('ijk,ilk->jl',w2[0,:,0,:,:],cp.conj(w2[0,:,0,:,:])).reshape(self.D*self.D)
         for i in range(1,self.n_features-1):
-            newtmp = np.einsum('pimj,pklj->ikml',w2[i,:,:,:,:],
-                        np.conjugate(w2[i,:,:,:,:])).reshape((self.D*self.D,self.D*self.D))
-            tmp[i,:] = np.dot(tmp[i-1,:],newtmp)  
-        newtmp = np.einsum('ijk,ilk->jl',w2[self.n_features-1,:,:,0,:],
-                    np.conjugate(w2[self.n_features-1,:,:,0,:])).reshape(self.D*self.D)
-        mpscontracted=np.inner(tmp[self.n_features-2,:],newtmp)
+            newtmp = cp.einsum('pimj,pklj->ikml',w2[i,:,:,:,:],
+                        cp.conjugate(w2[i,:,:,:,:])).reshape((self.D*self.D,self.D*self.D))
+            tmp[i,:] = cp.dot(tmp[i-1,:],newtmp)  
+        newtmp = cp.einsum('ijk,ilk->jl',w2[self.n_features-1,:,:,0,:],
+                    cp.conjugate(w2[self.n_features-1,:,:,0,:])).reshape(self.D*self.D)
+        mpscontracted=cp.inner(tmp[self.n_features-2,:],newtmp)
         tmp[self.n_features-1,:]=mpscontracted
 
         tmp2[self.n_features-1,:]=newtmp
         for i in range(self.n_features-2,-1,-1):
-            newtmp = np.einsum('pimj,pklj->ikml',w2[i,:,:,:,:],
-                        np.conjugate(w2[i,:,:,:,:])).reshape((self.D*self.D,self.D*self.D))
-            tmp2[i,:] = np.dot(newtmp,tmp2[i+1,:])
-        newtmp=np.einsum('ijk,ilk->jl',w2[0,:,0,:,:],
-                         np.conj(w2[0,:,0,:,:])).reshape(self.D*self.D)
-        tmp2[0,:]=np.inner(newtmp,tmp2[1,:])
+            newtmp = cp.einsum('pimj,pklj->ikml',w2[i,:,:,:,:],
+                        cp.conjugate(w2[i,:,:,:,:])).reshape((self.D*self.D,self.D*self.D))
+            tmp2[i,:] = cp.dot(newtmp,tmp2[i+1,:])
+        newtmp=cp.einsum('ijk,ilk->jl',w2[0,:,0,:,:],
+                         cp.conj(w2[0,:,0,:,:])).reshape(self.D*self.D)
+        tmp2[0,:]=cp.inner(newtmp,tmp2[1,:])
         
         for j in range(self.d):
-            derivative[0,j,0,:,:]=2*np.einsum('ij,il->lj',w2[0,j,0,:,:],
+            derivative[0,j,0,:,:]=2*cp.einsum('ij,il->lj',w2[0,j,0,:,:],
                     tmp2[1,:].reshape(self.D,self.D))
             derivative[self.n_features-1,j,:,0,:]=\
-            2*np.einsum('ij,il->lj',w2[self.n_features-1,j,:,0,:],
+            2*cp.einsum('ij,il->lj',w2[self.n_features-1,j,:,0,:],
                         tmp[self.n_features-2,:].reshape(self.D,self.D))
         for i in range(1,self.n_features-1):
             temp1=tmp[i-1,:].reshape(self.D,self.D)
             temp2=tmp2[i+1,:].reshape(self.D,self.D)
             for j in range(self.d):
-                derivative[i,j,:,:,:]=2*np.einsum('ikm,ij,kl->jlm',
+                derivative[i,j,:,:,:]=2*cp.einsum('ikm,ij,kl->jlm',
                                             w2[i,j,:,:,:],temp1,temp2)
         
         return derivative.reshape(self.m_parameters)
@@ -208,7 +208,7 @@ class RealLPS(TN):
         rng : random number generation
         """
         self.m_parameters = self.n_features*self.d*self.D*self.D*self.mu
-        self.w=np.asarray(rng.normal(0, 1, self.m_parameters))
+        self.w=cp.asarray(rng.normal(0, 1, self.m_parameters))
 
  
     def _weightinitialization2(self,rng):
@@ -218,7 +218,7 @@ class RealLPS(TN):
         rng : random number generation
         """
         self.m_parameters2 = (self.n_features-2)*self.d*self.D*self.D*self.mu+self.d*self.D*self.mu*2
-        return np.asarray(rng.rand(self.m_parameters2))
+        return cp.asarray(rng.rand(self.m_parameters2))
         
     def _padding_function(self, w):
         """Reshaping function to add to the input parameters the unused parameters
@@ -230,7 +230,7 @@ class RealLPS(TN):
         -------
         w : numpy array, shape (m_parameters,)
         """
-        new_w=np.zeros((self.n_features,self.d,self.D,self.D,self.mu),dtype=w.dtype)
+        new_w=cp.zeros((self.n_features,self.d,self.D,self.D,self.mu),dtype=w.dtype)
         new_w[0,:,0,:,:]=w[0:self.D*self.d*self.mu].reshape(self.d,self.D,self.mu)
         new_w[1:self.n_features-1,:,:,:,:]=w[self.D*self.d*self.mu*2:].reshape((self.n_features-2,self.d,self.D,self.D,self.mu))
         new_w[self.n_features-1,:,:,0,:]=w[self.D*self.d*self.mu:self.D*self.d*self.mu*2].reshape(self.d,self.D,self.mu)
@@ -246,7 +246,7 @@ class RealLPS(TN):
         w : numpy array, shape (m_parameters2,)
         """
         w=w.reshape((self.n_features,self.d,self.D,self.D,self.mu))
-        new_w=np.zeros(self.m_parameters2,dtype=w.dtype)
+        new_w=cp.zeros(self.m_parameters2,dtype=w.dtype)
         new_w[0:self.D*self.d*self.mu]=w[0,:,0,:,:].reshape(self.d*self.D*self.mu)
         new_w[self.D*self.d*self.mu:self.D*self.d*self.mu*2]=w[self.n_features-1,:,:,0,:].reshape(self.d*self.D*self.mu)
         new_w[self.D*self.d*self.mu*2:]=w[1:self.n_features-1,:,:,:,:].reshape((self.n_features-2)*self.d*self.D*self.D*self.mu)
@@ -263,7 +263,7 @@ class RealLPS(TN):
         update_w : numpy array, shape (m_parameters,)
             array of derivatives of the log-likelihood
         """
-        update_w=np.zeros(self.m_parameters,dtype=np.float64)
+        update_w=cp.zeros(self.m_parameters,dtype=cp.float64)
         for n in range(v.shape[0]):
             update_w -= self._logderivative(v[n,:])
         update_w += v.shape[0]*self._logderivativenorm()    

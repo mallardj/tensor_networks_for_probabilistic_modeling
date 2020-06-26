@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import time
-import numpy as np
+import numpy as cp
 from sklearn.utils import check_array
 from sklearn.utils import check_random_state
 from functools import partial
@@ -31,7 +31,7 @@ class TN():
     ----------
     Attributes
     ----------
-    w : numpy array, shape (m_parameters)
+    w : cupy array, shape (m_parameters)
         Parameters of the tensor network
     norm : float
         normalization constant for the probability distribution
@@ -60,7 +60,7 @@ class TN():
         """Unnormalized probability of one configuration P(x)
         Parameters
         ----------
-        x : numpy array, shape (n_features,)
+        x : cupy array, shape (n_features,)
             One configuration
         Returns
         -------
@@ -80,11 +80,11 @@ class TN():
         """Compute the derivatives of P(x)
         Parameters
         ----------
-        x : numpy array, shape (n_features,)
+        x : cupy array, shape (n_features,)
             One configuration
         Returns
         -------
-        derivative : numpy array, shape (m_parameters,)
+        derivative : cupy array, shape (m_parameters,)
         """
         pass
     
@@ -92,7 +92,7 @@ class TN():
         """Compute the derivatives of the norm
         Returns
         -------
-        derivative : numpy array, shape (m_parameters,)
+        derivative : cupy array, shape (m_parameters,)
         """
         pass
     
@@ -100,11 +100,11 @@ class TN():
         """Compute the logderivatives of P(x)
         Parameters
         ----------
-        x : numpy array, shape (n_features,)
+        x : cupy array, shape (n_features,)
             One configuration
         Returns
         -------
-        derivative : numpy array, shape (m_parameters,)
+        derivative : cupy array, shape (m_parameters,)
         """
         derivative=self._derivative(x)/self._probability(x)
         return derivative
@@ -113,7 +113,7 @@ class TN():
         """Compute the logderivatives of the norm
         Returns
         -------
-        derivative : numpy array, shape (m_parameters,)
+        derivative : cupy array, shape (m_parameters,)
         """
         derivative=self._derivativenorm()/self.norm
         return derivative
@@ -123,7 +123,7 @@ class TN():
         Updatest the parameters and recomputes the norm
         Parameters
         ----------
-        v : numpy array, shape (n_samples, n_features)
+        v : cupy array, shape (n_samples, n_features)
             The data to use for training.
         """
         update_w = self._likelihood_derivative(v)
@@ -134,14 +134,14 @@ class TN():
         """Compute derivatives of log-likelihood of configurations in v
         Parameters
         ----------
-        v : numpy array, shape (n_samples,n_features)
+        v : cupy array, shape (n_samples,n_features)
             Configurations
         Returns
         -------
-        update_w : numpy array, shape (m_parameters,)
+        update_w : cupy array, shape (m_parameters,)
             array of derivatives of the log-likelihood
         """
-        update_w=np.zeros(self.m_parameters)
+        update_w=cp.zeros(self.m_parameters)
         for n in range(v.shape[0]):
             update_w -= self._logderivative(v[n,:])
         update_w += v.shape[0]*self._logderivativenorm()    
@@ -152,7 +152,7 @@ class TN():
         """Compute averaged negative log-likelihood of configurations in v
         Parameters
         ----------
-        v : numpy array, shape (n_samples,n_features)
+        v : cupy array, shape (n_samples,n_features)
             dataset to compute the likelihood of
         w : parameters of tensor network (optional)
         Returns
@@ -165,7 +165,7 @@ class TN():
             self.w=w
         self.norm=self._computenorm()
         for n in range(v.shape[0]):
-            loglikelihood+=np.log(max(self._probability(v[n,:])/self.norm,10** (-50)))
+            loglikelihood+=cp.log(max(self._probability(v[n,:])/self.norm,10** (-50)))
         return -loglikelihood/v.shape[0]
 
     def distance(self, X, w=None):
@@ -185,14 +185,14 @@ class TN():
         if w is not None:
             self.w=self._padding_function(w)
         self.norm=self._computenorm()
-        for i in itertools.product(np.arange(0,self.d), repeat = self.n_features):
-            var=np.array(i)
+        for i in itertools.product(cp.arange(0,self.d), repeat = self.n_features):
+            var=cp.array(i)
             b=self._probability(var)/self.norm
             a=X[tuple(var)]
             if a<epsilon:
-                distance+=-a*np.log(b)
+                distance+=-a*cp.log(b)
             else:
-                distance+=a*np.log(a)-a*np.log(b)
+                distance+=a*cp.log(a)-a*cp.log(b)
         return distance
 
     def _function_real_to_complex(self, function, X, w=None):
@@ -200,19 +200,19 @@ class TN():
         and returning the result viewed as a real array.
         """
         derivative=function(X,w.view(self.w.dtype))
-        return derivative.view(np.float64)   
+        return derivative.view(cp.float64)   
 
     def _padding_function(self, w):
         """Reshaping function to add to the input parameters the unused parameters
         at the boundary conditions.
         Parameters
         ----------
-        w : numpy array, shape (m_parameters2,)
+        w : cupy array, shape (m_parameters2,)
         Returns
         -------
-        w : numpy array, shape (m_parameters,)
+        w : cupy array, shape (m_parameters,)
         """
-        new_w=np.zeros((self.n_features,self.d,self.D,self.D),dtype=w.dtype)
+        new_w=cp.zeros((self.n_features,self.d,self.D,self.D),dtype=w.dtype)
         new_w[0,:,0,:]=w[0:self.D*self.d].reshape(self.d,self.D)
         new_w[1:self.n_features-1,:,:,:]=w[self.D*self.d*2:].reshape((self.n_features-2,self.d,self.D,self.D))
         new_w[self.n_features-1,:,:,0]=w[self.D*self.d:self.D*self.d*2].reshape(self.d,self.D)
@@ -222,13 +222,13 @@ class TN():
         """Reshaping function to remove the unused parameters of the boundary conditions.
         Parameters
         ----------
-        w : numpy array, shape (m_parameters,)
+        w : cupy array, shape (m_parameters,)
         Returns
         -------
-        w : numpy array, shape (m_parameters2,)
+        w : cupy array, shape (m_parameters2,)
         """
         w=w.reshape((self.n_features,self.d,self.D,self.D))
-        new_w=np.zeros(self.m_parameters2,dtype=w.dtype)
+        new_w=cp.zeros(self.m_parameters2,dtype=w.dtype)
         new_w[0:self.D*self.d]=w[0,:,0,:].reshape(self.d*self.D)
         new_w[self.D*self.d:self.D*self.d*2]=w[self.n_features-1,:,:,0].reshape(self.d*self.D)
         new_w[self.D*self.d*2:]=w[1:self.n_features-1,:,:,:].reshape((self.n_features-2)*self.d*self.D*self.D)
@@ -243,18 +243,18 @@ class TN():
         w : parameters of MPS
         Returns
         -------
-        derivative : numpy array, shape (m_parameters2,)
+        derivative : cupy array, shape (m_parameters2,)
             array of derivatives of the distance function (KL divergence)
         """
-        derivative=np.zeros(self.m_parameters,dtype=w.dtype)
+        derivative=cp.zeros(self.m_parameters,dtype=w.dtype)
         
         if w is not None:
             self.w=self._padding_function(w)
             
         self.norm=self._computenorm()
         Zlogderivative=self._logderivativenorm()
-        for i in itertools.product(np.arange(0,self.d), repeat = self.n_features):
-            var=np.array(i)
+        for i in itertools.product(cp.arange(0,self.d), repeat = self.n_features):
+            var=cp.array(i)
             a=X[tuple(var)]
             derivative-=a*(self._logderivative(var)-Zlogderivative)
         return self._unpadding_function(derivative)
@@ -265,7 +265,7 @@ class TN():
         ----------
         rng : random number generator
         """
-        self.w = np.asarray(rng.normal(0, 1, self.m_parameters))
+        self.w = cp.asarray(rng.normal(0, 1, self.m_parameters))
 
     def _weightinitialization2(self,rng):
         """Initialize weights w randomly
@@ -274,7 +274,7 @@ class TN():
         rng : random number generator
         """
         self.m_parameters2=(self.n_features-2)*self.d*self.D*self.D+2*self.D*self.d
-        return np.asarray(rng.rand(self.m_parameters2))
+        return cp.asarray(rng.rand(self.m_parameters2))
         
     def _gen_even_slices(self, batch_size, n_batches, n_samples, rng):
         """Generate batch slices of a dataset
@@ -298,16 +298,16 @@ class TN():
                 end = start + this_n
                 if n_samples is not None:
                     end = min(n_samples, end)
-                yield array_rand[np.arange(start, end)]
+                yield array_rand[cp.arange(start, end)]
                 start = end
             
     def fit(self, X, w_init=None):
         """Fit the model to the data X, with parameters initialized at w_init
         Parameters
         ----------
-        X : {numpy array, integer matrix} shape (n_samples, n_features)
+        X : {cupy array, integer matrix} shape (n_samples, n_features)
             Training data.
-        w_init : {numpy array, float or complex} shape (m_parameters,) (optional)
+        w_init : {cupy array, float or complex} shape (m_parameters,) (optional)
             Initial value of the parameters
         Returns
         -------
@@ -316,13 +316,13 @@ class TN():
         """
 
 #       Some initial checks of the data, initialize random number generator
-        X = check_array(X, dtype=np.int64)
+        X = check_array(X, dtype=cp.int64)
         rng = check_random_state(self.random_state)
 
 #       Initialize parameters of MPS
         self.n_samples = X.shape[0]
         self.n_features = X.shape[1]
-        self.d = np.max(X)+1
+        self.d = cp.max(X)+1
         self.m_parameters = self.n_features*self.d*self.D*self.D
         if w_init is None:
             self._weightinitialization(rng)
@@ -331,7 +331,7 @@ class TN():
         self.norm=self._computenorm()
         self.history=[]
 
-        n_batches = int(np.ceil(float(self.n_samples) / self.batch_size))
+        n_batches = int(cp.ceil(float(self.n_samples) / self.batch_size))
         begin = time.time()
         for iteration in range(1, self.n_iter + 1):
             batch_slices = list(self._gen_even_slices(self.batch_size,
@@ -358,9 +358,9 @@ class TN():
         """Fit the model to the tensor X, with parameters initialized at w_init
         Parameters
         ----------
-        X : {numpy array, non-negative tensor} shape (d, d, d, d,...) (dimension d^n_features)
+        X : {cupy array, non-negative tensor} shape (d, d, d, d,...) (dimension d^n_features)
             Tensor to be approximated
-        w_init : {numpy array, float or complex} shape (m_parameters,) (optional)
+        w_init : {cupy array, float or complex} shape (m_parameters,) (optional)
             Initial value of the parameters
         Returns
         -------
@@ -370,9 +370,9 @@ class TN():
 
 #       Some initial checks of the data, initialize random number generator
         rng = check_random_state(self.random_state)
-        if np.abs(np.sum(X)-1)>10**(-15):
+        if cp.abs(cp.sum(X)-1)>10**(-15):
             print("Input tensor has been normalized")
-            X=X/np.sum(X) #Tensor needs to be normalized to be a probability mass function
+            X=X/cp.sum(X) #Tensor needs to be normalized to be a probability mass function
         
 #       Initialize parameters of MPS
         self.d = int(X.shape[1])
@@ -395,7 +395,7 @@ class TN():
 
         initial_value=self._weightinitialization2(rng)
 
-        res=minimize(fun=distancepartial,jac=derivativedistancepartial,x0=initial_value.view(np.float64),\
+        res=minimize(fun=distancepartial,jac=derivativedistancepartial,x0=initial_value.view(cp.float64),\
                      method='L-BFGS-B',options={'maxiter': self.n_iter},tol=10**(-16))
 
         self.w=self._padding_function(res.x.view(self.w.dtype))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from .MPSClass import TN
-import numpy as np
+import cupy as cp
 
 class PositiveMPS(TN):
     """Matrix Product States with non-negative parameters
@@ -54,17 +54,17 @@ class PositiveMPS(TN):
         """Unnormalized probability of one configuration P(x)
         Parameters
         ----------
-        x : numpy array, shape (n_features,)
+        x : cupy array, shape (n_features,)
             One configuration
         Returns
         -------
         probability : float
         """
-        w2 = np.reshape(self.w,(self.n_features,self.d,self.D,self.D))
-        tmp = np.square(w2[0,x[0],0,:]) #First tensor
+        w2 = cp.reshape(self.w,(self.n_features,self.d,self.D,self.D))
+        tmp = cp.square(w2[0,x[0],0,:]) #First tensor
         for i in range(1,self.n_features-1):
-            tmp = np.dot(tmp,np.square(w2[i,x[i],:,:])) #MPS contraction  
-        probability = np.inner(tmp,np.square(w2[self.n_features-1,
+            tmp = cp.dot(tmp,cupy.square(w2[i,x[i],:,:])) #MPS contraction  
+        probability = cp.inner(tmp,cupy.square(w2[self.n_features-1,
                                                 x[self.n_features-1],:,0]))
         return probability
 
@@ -74,11 +74,11 @@ class PositiveMPS(TN):
         -------
         norm : float
         """
-        w2 = np.reshape(self.w,(self.n_features,self.d,self.D,self.D))
-        tmp = np.sum(np.square(w2[0,:,0,:]),0) #First tensor
+        w2 = cp.reshape(self.w,(self.n_features,self.d,self.D,self.D))
+        tmp = cp.sum(cp.square(w2[0,:,0,:]),0) #First tensor
         for i in range(1,self.n_features-1):
-            tmp = np.dot(tmp,np.sum(np.square(w2[i,:,:,:]),0)) #MPS contraction  
-        norm = np.inner(tmp,np.sum(np.square(w2[self.n_features-1,:,:,0]),0))
+            tmp = cp.dot(tmp,cp.sum(cp.square(w2[i,:,:,:]),0)) #MPS contraction  
+        norm = cp.inner(tmp,cp.sum(cp.square(w2[self.n_features-1,:,:,0]),0))
         return norm
         
     def _derivative(self, x):
@@ -91,34 +91,34 @@ class PositiveMPS(TN):
         -------
         derivative : numpy array, shape (m_parameters,)
         """
-        w2 = np.reshape(self.w,(self.n_features,self.d,self.D,self.D))
-        derivative = np.zeros((self.n_features,self.d,self.D,self.D))
+        w2 = cp.reshape(self.w,(self.n_features,self.d,self.D,self.D))
+        derivative = cp.zeros((self.n_features,self.d,self.D,self.D))
 
         #Store intermediate tensor contractions for the derivatives: 
         #left to right and right to left
         #tmp stores the contraction of the first i+1 tensors from the left 
         #in tmp[i,:,:], tmp2 the remaining tensors on the right
         #the mps contracted is the remaining contraction tmp[i-1]w[i]tmp2[i+1]
-        tmp = np.zeros((self.n_features,self.D))
-        tmp2 = np.zeros((self.n_features,self.D))
-        tmp[0,:] = np.square(w2[0,x[0],0,:])
+        tmp = cp.zeros((self.n_features,self.D))
+        tmp2 = cp.zeros((self.n_features,self.D))
+        tmp[0,:] = cp.square(w2[0,x[0],0,:])
         for i in range(1,self.n_features-1):
-            tmp[i,:] = np.dot(tmp[i-1,:],np.square(w2[i,x[i],:,:]))  
-        tmp[self.n_features-1,:] = np.inner(tmp[self.n_features-2,:],
-                np.square(w2[self.n_features-1,x[self.n_features-1],:,0]))
-        tmp2[self.n_features-1,:] = np.square(w2[self.n_features-1,
+            tmp[i,:] = cp.dot(tmp[i-1,:],cp.square(w2[i,x[i],:,:]))  
+        tmp[self.n_features-1,:] = cp.inner(tmp[self.n_features-2,:],
+                cp.square(w2[self.n_features-1,x[self.n_features-1],:,0]))
+        tmp2[self.n_features-1,:] = cp.square(w2[self.n_features-1,
                 x[self.n_features-1],:,0])
         for i in range(self.n_features-2,-1,-1):
-            tmp2[i,:] = np.dot(np.square(w2[i,x[i],:]),tmp2[i+1,:])
-        tmp2[0,:] = np.inner(np.square(w2[0,x[0],0,:]),tmp2[1,:])
+            tmp2[i,:] = cp.dot(cp.square(w2[i,x[i],:]),tmp2[i+1,:])
+        tmp2[0,:] = cp.inner(cp.square(w2[0,x[0],0,:]),tmp2[1,:])
     
         #The derivative of each tensor is the contraction of the other tensors
-        derivative[0,x[0],0,:] = np.multiply(tmp2[1,:],2*(w2[0,x[0],0,:]))
+        derivative[0,x[0],0,:] = cp.multiply(tmp2[1,:],2*(w2[0,x[0],0,:]))
         derivative[self.n_features-1,x[self.n_features-1],:,0] = \
-                    np.multiply(tmp[self.n_features-2,:],
+                    cp.multiply(tmp[self.n_features-2,:],
                         2*(w2[self.n_features-1,x[self.n_features-1],:,0]))
         for i in range(1,self.n_features-1):
-                derivative[i,x[i],:,:]=np.multiply(np.outer(tmp[i-1,:],
+                derivative[i,x[i],:,:]=cp.multiply(cp.outer(tmp[i-1,:],
                 tmp2[i+1,:]),2*(w2[i,x[i],:]))
 
         return derivative.reshape(self.m_parameters)
@@ -129,28 +129,28 @@ class PositiveMPS(TN):
         -------
         derivative : numpy array, shape (m_parameters,)
         """
-        w2 = np.reshape(self.w,(self.n_features,self.d,self.D,self.D))
-        derivative = np.zeros((self.n_features,self.d,self.D,self.D)) 
+        w2 = cp.reshape(self.w,(self.n_features,self.d,self.D,self.D))
+        derivative = cp.zeros((self.n_features,self.d,self.D,self.D)) 
         
-        tmp=np.zeros((self.n_features,self.D))
-        tmp2=np.zeros((self.n_features,self.D))
-        tmp[0,:]=np.sum(np.square(w2[0,:,0,:]),0)
+        tmp=cp.zeros((self.n_features,self.D))
+        tmp2=cp.zeros((self.n_features,self.D))
+        tmp[0,:]=cp.sum(cp.square(w2[0,:,0,:]),0)
         for i in range(1,self.n_features-1):
-            tmp[i,:]=np.dot(tmp[i-1,:],np.sum(np.square(w2[i,:,:,:]),0)) 
-        tmp[self.n_features-1,:]=np.inner(tmp[self.n_features-2,:],
-                np.sum(np.square(w2[self.n_features-1,:,:,0]),0))
-        tmp2[self.n_features-1,:]=np.sum(np.square(w2[self.n_features-1,:,:,0]),0)
+            tmp[i,:]=cp.dot(tmp[i-1,:],cp.sum(cp.square(w2[i,:,:,:]),0)) 
+        tmp[self.n_features-1,:]=cp.inner(tmp[self.n_features-2,:],
+                cp.sum(cp.square(w2[self.n_features-1,:,:,0]),0))
+        tmp2[self.n_features-1,:]=cp.sum(cp.square(w2[self.n_features-1,:,:,0]),0)
         for i in range(self.n_features-2,-1,-1):
-            tmp2[i,:]=np.dot(np.sum(np.square(w2[i,:,:,:]),0),tmp2[i+1,:])
-        tmp2[0,:]=np.inner(np.sum(np.square(w2[0,:,0,:]),0),tmp2[1,:])
+            tmp2[i,:]=cp.dot(cp.sum(cp.square(w2[i,:,:,:]),0),tmp2[i+1,:])
+        tmp2[0,:]=cp.inner(cp.sum(cp.square(w2[0,:,0,:]),0),tmp2[1,:])
     
         for j in range(self.d):
-            derivative[0,j,0,:]=np.multiply(tmp2[1,:],2*(w2[0,j,0,:]))
+            derivative[0,j,0,:]=cp.multiply(tmp2[1,:],2*(w2[0,j,0,:]))
             derivative[self.n_features-1,j,:,0]=\
-                np.multiply(tmp[self.n_features-2,:],2*(w2[self.n_features-1,j,:,0]))
+                cp.multiply(tmp[self.n_features-2,:],2*(w2[self.n_features-1,j,:,0]))
         for i in range(1,self.n_features-1):
-            temp3=np.outer(tmp[i-1,:],tmp2[i+1,:])
+            temp3=cp.outer(tmp[i-1,:],tmp2[i+1,:])
             for j in range(self.d):
-                derivative[i,j,:,:]=np.multiply(temp3,2*(w2[i,j,:,:]))
+                derivative[i,j,:,:]=cp.multiply(temp3,2*(w2[i,j,:,:]))
         return derivative.reshape(self.m_parameters)
 
